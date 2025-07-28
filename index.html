@@ -1,0 +1,150 @@
+<!-- webapp/index.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liv Bubble</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #12c2e9, #c471ed, #f64f59);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: white;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 20px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    .bubble-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      max-width: 300px;
+      margin: 20px auto;
+    }
+    .bubble {
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      user-select: none;
+    }
+    .bubble:hover {
+      transform: scale(1.1);
+      background: rgba(255, 255, 255, 0.5);
+    }
+    .bubble.popped {
+      transform: scale(0);
+      background: #ff4757;
+    }
+    .task {
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      max-width: 300px;
+      display: none;
+    }
+    .btn {
+      margin-top: 20px;
+      padding: 12px 24px;
+      background: #00d2d3;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      font-size: 16px;
+      cursor: pointer;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Лопни 5 пузырей!</h1>
+  <div class="bubble-container" id="bubbles"></div>
+
+  <div class="task" id="task">
+    <p><strong>Задание:</strong> <span id="task-text">Подпишитесь на канал @livbubble</span></p>
+    <button id="task-done">Выполнено</button>
+  </div>
+
+  <button class="btn" id="complete">Завершить игру</button>
+
+  <script>
+    const bubbles = document.getElementById('bubbles');
+    const task = document.getElementById('task');
+    const taskText = document.getElementById('task-text');
+    const taskDoneBtn = document.getElementById('task-done');
+    const completeBtn = document.getElementById('complete');
+
+    let poppedCount = 0;
+    let tasksCompleted = 0;
+
+    // Создаём 10 пузырей
+    for (let i = 0; i < 10; i++) {
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = '🫧';
+      bubble.addEventListener('click', () => popBubble(bubble));
+      bubbles.appendChild(bubble);
+    }
+
+    function popBubble(bubble) {
+      if (bubble.classList.contains('popped')) return;
+      if (poppedCount >= 5) return;
+
+      bubble.classList.add('popped');
+      poppedCount++;
+
+      if (poppedCount <= 5) {
+        showRandomTask();
+      }
+
+      if (poppedCount === 5) {
+        setTimeout(() => {
+          completeBtn.style.display = 'block';
+        }, 1000);
+      }
+    }
+
+    function showRandomTask() {
+      const tasks = [
+        'Подпишитесь на канал @livbubble',
+        'Перейдите по ссылке и купите товар на Ozon',
+        'Подпишитесь на блогера @examplebloger',
+        'Оцените приложение в App Store',
+        'Поделитесь розыгрышем с другом'
+      ];
+      taskText.textContent = tasks[Math.floor(Math.random() * tasks.length)];
+      task.style.display = 'block';
+    }
+
+    taskDoneBtn.addEventListener('click', () => {
+      tasksCompleted++;
+      task.style.display = 'none';
+      if (tasksCompleted === 5) {
+        Telegram.WebApp.sendData(JSON.stringify({ game_completed: true, tasks: 5 }));
+      }
+    });
+
+    completeBtn.addEventListener('click', () => {
+      Telegram.WebApp.sendData(JSON.stringify({ game_completed: true, bubbles_popped: 5 }));
+    });
+  </script>
+</body>
+</html>
