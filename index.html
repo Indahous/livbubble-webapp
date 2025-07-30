@@ -1,4 +1,29 @@
-<!-- webapp/index.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liv Bubble</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Лопни 5 пузырей!</h1>
+  <div class="bubble-container" id="bubbles"></div>
+  <button class="btn" id="complete" style="display: none;">Завершить игру</button>
+
+  <!-- Модальное окно с заданием -->
+  <div id="task-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h3 id="task-title"></h3>
+      <div id="task-content"></div>
+      <button onclick="closeTaskModal()">Закрыть</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html><!-- webapp/index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>

@@ -1,0 +1,40 @@
+{
+  "priority_tasks": [
+    {
+      "id": 1,
+      "type": "subscribe",
+      "title": "Подписаться на канал",
+      "link": "https://t.me/livbubble",
+      "reward": 10
+    },
+    {
+      "id": 2,
+      "type": "buy",
+      "title": "Купи швабру на Ozon",
+      "link": "https://ozon.ru/p123",
+      "store": "Ozon",
+      "reward": 50
+    },
+    {
+      "id": 3,
+      "type": "question",
+      "title": "Кто написал 'Войну и мир'?",
+      "correct_answer": "Толстой",
+      "case_sensitive": false
+    },
+    {
+      "id": 4,
+      "type": "question",
+      "title": "Четвёртая планета от Солнца",
+      "correct_answer": "Марс",
+      "case_sensitive": false
+    },
+    {
+      "id": 5,
+      "type": "question",
+      "title": "Решите пример: 2 + 2 = ?",
+      "correct_answer": "4",
+      "case_sensitive": false
+    }
+  ]
+}
