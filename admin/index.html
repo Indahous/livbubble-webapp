@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="admin.css" />
   <script>
     function checkPassword() {
-      const correctPassword = "admin123";
+      const correctPassword = process.env.ADMIN_PASSWORD; // ← Теперь берётся из .env
       const pass = prompt("Введите пароль для доступа к админ-панели:");
       if (pass === null) {
         alert("Доступ отменён.");
@@ -18,7 +18,7 @@
       }
     }
   </script>
-  <body onload="checkPassword()">
+<body onload="checkPassword()">
   <div class="container">
     <h1>🎯 Админ-панель</h1>
     <button onclick="addTask()">+ Добавить задание</button>
