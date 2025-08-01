@@ -5,12 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Админ-панель Liv Bubble</title>
   <link rel="stylesheet" href="admin.css" />
+  <script>
+    // Запрос пароля при загрузке
+    function checkPassword() {
+      const correctPassword = "admin123"; // ← Замени на свой пароль
+      const pass = prompt("Введите пароль для доступа к админ-панели:");
+      
+      if (pass !== correctPassword) {
+        alert("❌ Неверный пароль. Доступ запрещён.");
+        window.location.href = "/"; // Перенаправление на главную
+      }
+    }
+  </script>
 </head>
-<body>
+<body onload="checkPassword()">
   <div class="container">
-    <h1>Админ-панель</h1>
+    <h1>🎯 Админ-панель</h1>
     <button onclick="addTask()">+ Добавить задание</button>
-    <button onclick="saveTasks()">Сохранить</button>
+    <button onclick="saveTasks()">💾 Сохранить</button>
 
     <div id="tasks-list"></div>
   </div>
