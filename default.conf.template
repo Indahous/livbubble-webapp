@@ -1,26 +1,21 @@
 server {
-  listen ${PORT:-8080};
-  server_name localhost;
+    listen 8080;
+    server_name localhost;
 
-  location / {
-    root   /usr/share/nginx/html;
-    index  index.html;
-    try_files $uri $uri/ =404;
-  }
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html;
+        try_files $uri $uri/ =404;
+    }
 
-  location /admin/ {
-    alias  /usr/share/nginx/html/admin/;
-    index  index.html;
-    try_files $uri $uri/ =404;
-  }
+    location /admin/ {
+        alias  /usr/share/nginx/html/admin/;
+        index  index.html;
+        try_files $uri $uri/ =404;
+    }
 
-  error_page   500 502 503 504  /50x.html;
-  location = /50x.html {
-    root   /usr/share/nginx/html;
-  }
-
-  # Передача переменной пароля через заголовок
-  location /admin/ {
-    add_header X-Admin-Password "$ADMIN_PASSWORD";
-  }
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
 }

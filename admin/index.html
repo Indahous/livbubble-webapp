@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta name="admin-password" content="${ADMIN_PASSWORD}">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Админ-панель Liv Bubble</title>
   <link rel="stylesheet" href="admin.css" />
   <script>
     function checkPassword() {
-      const correctPassword = document.querySelector('meta[name="admin-password"]').content;
-      const pass = prompt("Введите пароль для доступа к админ-панели:");
+      const correctPassword = "admin123"; // ← Замени на свой пароль
+      const pass = prompt("🔐 Введите пароль для доступа к админ-панели:");
       if (pass === null) {
         alert("Доступ отменён.");
         window.location.href = "/";
@@ -19,6 +18,7 @@
       }
     }
   </script>
+</head>
 <body onload="checkPassword()">
   <div class="container">
     <h1>🎯 Админ-панель</h1>
