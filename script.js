@@ -1,119 +1,173 @@
+// script.js
+
+// Глобальные переменные
 let tasks = [];
 let completedTasks = 0;
+let bubblesPopped = 0;
 
+// Элементы DOM
+const bubblesContainer = document.getElementById('bubbles');
+const completeButton = document.getElementById('complete');
+const taskModal = document.getElementById('task-modal');
+const taskTitle = document.getElementById('task-title');
+const taskContent = document.getElementById('task-content');
+const modalCloseButton = document.querySelector('#task-modal button');
+
+// Загрузка заданий с сервера
 async function loadTasks() {
   try {
     const response = await fetch('/tasks.json');
+    if (!response.ok) throw new Error('Не удалось загрузить tasks.json');
     const data = await response.json();
-    tasks = data.priority_tasks;
-  } catch (e) {
-    console.error("Не удалось загрузить задания:", e);
+    tasks = data.priority_tasks || [];
+    console.log('✅ Задания загружены:', tasks);
+  } catch (error) {
+    console.error('❌ Ошибка загрузки заданий:', error);
+    // Для отладки: подставим тестовые задания, если файл недоступен
+    tasks = [
+      {
+        id: 1,
+        type: 'subscribe',
+        title: 'Подписаться на канал',
+        link: 'https://t.me/livbubble'
+      },
+      {
+        id: 2,
+        type: 'question',
+        title: 'Кто написал "Войну и мир"?',
+        correct_answer: 'Толстой',
+        case_sensitive: false
+      }
+    ];
   }
 }
 
+// Показать модальное окно с заданием
 function showTaskModal(task) {
-  const modal = document.getElementById('task-modal');
-  const title = document.getElementById('task-title');
-  const content = document.getElementById('task-content');
+  taskTitle.textContent = task.title;
+  taskContent.innerHTML = '';
 
-  title.textContent = task.title;
+  if (task.type === 'subscribe' || task.type === 'buy') {
+    const link = document.createElement('a');
+    link.href = task.link;
+    link.target = '_blank';
+    link.textContent = 'Перейти к заданию';
+    link.className = 'task-btn';
+    taskContent.appendChild(link);
+  }
 
   if (task.type === 'question') {
-    content.innerHTML = `
-      <input type="text" id="answer-input" placeholder="Введите ответ">
-      <button onclick="checkAnswer('${task.correct_answer}', ${task.case_sensitive})">Проверить</button>
-    `;
-  } else {
-    content.innerHTML = `
-      <a href="${task.link}" target="_blank" class="task-btn">Перейти</a>
-    `;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'answer-input';
+    input.placeholder = 'Введите ответ';
+    input.className = 'task-input';
+    taskContent.appendChild(input);
+
+    const submitBtn = document.createElement('button');
+    submitBtn.textContent = 'Проверить';
+    submitBtn.className = 'task-btn';
+    submitBtn.onclick = () => {
+      const userAnswer = input.value.trim();
+      const correctAnswer = task.correct_answer.trim();
+      const isCorrect = task.case_sensitive
+        ? userAnswer === correctAnswer
+        : userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+
+      if (isCorrect) {
+        alert('✅ Правильно! Задание выполнено.');
+        closeTaskModal();
+        completedTasks++;
+        checkGameCompletion();
+      } else {
+        alert('❌ Неверно. Попробуй ещё раз.');
+      }
+    };
+    taskContent.appendChild(submitBtn);
   }
 
-  modal.style.display = 'flex';
+  taskModal.style.display = 'block';
 }
 
-function checkAnswer(correct, caseSensitive) {
-  const input = document.getElementById('answer-input').value.trim();
-  const userAnswer = caseSensitive ? input : input.toLowerCase();
-  const correctAnswer = caseSensitive ? correct : correct.toLowerCase();
-
-  if (userAnswer === correctAnswer) {
-    alert('Правильно!');
-    Telegram.WebApp.sendData(JSON.stringify({ task_completed: true, task_id: tasks[completedTasks].id }));
-    closeTaskModal();
-  } else {
-    alert('Неверно! Попробуй ещё раз.');
-  }
-}
-
+// Закрыть модальное окно
 function closeTaskModal() {
-  document.getElementById('task-modal').style.display = 'none';
+  taskModal.style.display = 'none';
+  const input = document.getElementById('answer-input');
+  if (input) input.value = '';
 }
 
+// Лопнуть пузырь
 function popBubble(bubble) {
+  if (bubble.classList.contains('popped')) return;
   bubble.classList.add('popped');
-  playPopSound();
-  createSplashEffect(bubble);
-  vibrate();
-}
+  bubblesPopped++;
 
-function playPopSound() {
-  const audio = new Audio('/assets/pop.mp3');
-  audio.play();
-}
-
-function createSplashEffect(bubble) {
-  for (let i = 0; i < 8; i++) {
-    const splash = document.createElement('div');
-    splash.className = 'splash';
-    const angle = Math.random() * 360;
-    const distance = 20 + Math.random() * 30;
-    splash.style.cssText = `
-      position: absolute;
-      width: 4px;
-      height: 4px;
-      background: white;
-      border-radius: 50%;
-      left: ${bubble.offsetLeft + 30}px;
-      top: ${bubble.offsetTop + 30}px;
-      transform: translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px);
-      opacity: 0;
-      animation: fadeOut 0.5s forwards;
-    `;
-    document.body.appendChild(splash);
-    setTimeout(() => splash.remove(), 500);
+  // Если ещё не все задания выполнены — показать следующее
+  if (completedTasks < tasks.length && tasks[completedTasks]) {
+    showTaskModal(tasks[completedTasks]);
+    completedTasks++;
+    checkGameCompletion();
   }
-}
 
-function vibrate() {
+  // Вибрация (если поддерживается)
   if ('vibrate' in navigator) {
     navigator.vibrate(100);
   }
 }
 
-// Генерация пузырей
-window.onload = async () => {
-  await loadTasks();
-  const bubbles = document.getElementById('bubbles');
+// Проверка завершения игры
+function checkGameCompletion() {
+  if (completedTasks >= 5) {
+    setTimeout(() => {
+      completeButton.style.display = 'block';
+    }, 1000);
+  }
+}
 
+// Обработчик завершения игры
+completeButton.addEventListener('click', () => {
+  if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+    Telegram.WebApp.sendData(JSON.stringify({
+      game_completed: true,
+      bubbles_popped: bubblesPopped,
+      tasks_completed: completedTasks
+    }));
+  } else {
+    console.log('🎮 Игра завершена!', {
+      bubbles_popped: bubblesPopped,
+      tasks_completed: completedTasks
+    });
+    alert('Игра завершена! Результат отправлен.');
+  }
+});
+
+// Генерация пузырей
+function createBubbles() {
   for (let i = 0; i < 10; i++) {
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
     bubble.innerHTML = '🫧';
-    bubble.addEventListener('click', () => {
-      if (bubble.classList.contains('popped')) return;
 
-      if (completedTasks < 5 && tasks[completedTasks]) {
-        showTaskModal(tasks[completedTasks]);
-        completedTasks++;
-      } else {
-        popBubble(bubble);
-      }
+    // Случайные координаты
+    const randomX = Math.random() * (window.innerWidth - 70);
+    const randomY = Math.random() * (window.innerHeight - 70);
 
-      if (completedTasks === 5) {
-        setTimeout(() => document.getElementById('complete').style.display = 'block', 1000);
-      }
-    });
-    bubbles.appendChild(bubble);
+    bubble.style.left = `${randomX}px`;
+    bubble.style.top = `${randomY}px`;
+
+    bubble.addEventListener('click', () => popBubble(bubble));
+    bubblesContainer.appendChild(bubble);
+  }
+}
+
+// Инициализация игры
+window.onload = async () => {
+  await loadTasks();
+  createBubbles();
+
+  // Проверка, что Telegram WebApp загружен
+  if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+    Telegram.WebApp.ready();
+    Telegram.WebApp.expand();
   }
 };
