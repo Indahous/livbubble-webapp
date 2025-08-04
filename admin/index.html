@@ -1,19 +1,52 @@
-<script>
-  async function checkPassword() {
-    const password = prompt("🔐 Введите пароль для доступа к админ-панели:");
-    if (!password) return window.location.href = "/";
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Админ-панель Liv Bubble</title>
+  <link rel="stylesheet" href="admin.css" />
+  <script>
+    /**
+     * Функция проверки пароля при загрузке страницы
+     * Если пароль неверный — редирект на главную
+     */
+    async function checkPassword() {
+      const password = prompt("🔐 Введите пароль для доступа к админ-панели:");
+      if (!password) {
+        alert("Доступ отменён.");
+        return window.location.href = "/";
+      }
 
-    const response = await fetch('/check-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
-    });
+      try {
+        const response = await fetch('/check-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
 
-    const data = await response.json();
-    if (!data.success) {
-      alert("❌ Неверный пароль. Доступ запрещён.");
-      window.location.href = "/";
+        const data = await response.json();
+        if (!data.success) {
+          alert("❌ Неверный пароль. Доступ запрещён.");
+          window.location.href = "/";
+        }
+      } catch (error) {
+        alert("⚠️ Ошибка сети. Попробуйте позже.");
+        window.location.href = "/";
+      }
     }
-  }
-</script>
+  </script>
+</head>
 <body onload="checkPassword()">
+  <div class="container">
+    <h1>🎯 Админ-панель</h1>
+    <button onclick="addTask()">+ Добавить задание</button>
+    <button onclick="saveTasks()">💾 Сохранить изменения</button>
+
+    <div id="tasks-list">
+      <!-- Список заданий будет сгенерирован здесь -->
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
