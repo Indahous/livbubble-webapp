@@ -3,41 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Админ-панель Liv Bubble</title>
+  <title>🔐 Вход в админ-панель</title>
   <link rel="stylesheet" href="admin.css" />
-  <script>
-    /**
-     * Функция проверки пароля при загрузке страницы
-     * Если пароль неверный — редирект на главную
-     */
-    function checkPassword() {
-      // 🔐 Замени "admin123" на свой пароль
-      const correctPassword = "admin123";
-      const pass = prompt("🔐 Введите пароль для доступа к админ-панели:");
-
-      if (pass === null) {
-        // Пользователь нажал "Отмена"
-        alert("Доступ отменён.");
-        window.location.href = "/";
-      } else if (pass !== correctPassword) {
-        alert("❌ Неверный пароль. Доступ запрещён.");
-        window.location.href = "/";
-      }
-      // Если пароль верный — страница загружается
-    }
-  </script>
 </head>
-<body onload="checkPassword()">
+<body>
   <div class="container">
-    <h1>🎯 Админ-панель</h1>
-    <button onclick="addTask()">+ Добавить задание</button>
-    <button onclick="saveTasks()">💾 Сохранить изменения</button>
-
-    <div id="tasks-list">
-      <!-- Список заданий будет сгенерирован здесь -->
-    </div>
+    <h1>🔐 Вход в админ-панель</h1>
+    <form id="login-form">
+      <input type="password" id="password" placeholder="Введите пароль" required />
+      <button type="submit">🔓 Войти</button>
+    </form>
+    <div id="error-message" style="color: red; margin-top: 10px;"></div>
   </div>
 
-  <script src="admin.js"></script>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const password = document.getElementById('password').value;
+      const errorMessage = document.getElementById('error-message');
+
+      try {
+        const response = await fetch('/check-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          // Перенаправляем на админ-панель
+          window.location.href = '/admin-panel';
+        } else {
+          errorMessage.textContent = '❌ Неверный пароль. Доступ запрещён.';
+        }
+      } catch (error) {
+        errorMessage.textContent = '⚠️ Ошибка сети. Попробуйте позже.';
+      }
+    });
+  </script>
 </body>
 </html>
