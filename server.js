@@ -6,7 +6,14 @@ const app = express();
 
 // Пароль из .env
 require('dotenv').config();
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+if (!ADMIN_PASSWORD) {
+    console.error("❌ КРИТИЧЕСКАЯ ОШИБКА: Переменная окружения ADMIN_PASSWORD не установлена!");
+    process.exit(1); // Останавливаем приложение
+} else {
+    console.log("✅ ADMIN_PASSWORD успешно загружен из переменных окружения.");
+}
 
 // Middleware
 app.use(express.json());
