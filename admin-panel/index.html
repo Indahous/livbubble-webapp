@@ -5,79 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🎯 Админ-панель Liv Bubble</title>
   <link rel="stylesheet" href="/admin/admin.css" />
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      background: white;
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-    h1 {
-      color: #333;
-      text-align: center;
-    }
-    button {
-      padding: 10px 20px;
-      margin: 10px 5px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    button:first-child {
-      background: #00d2d3;
-      color: white;
-    }
-    button:last-child {
-      background: #00bfa5;
-      color: white;
-    }
-    .task {
-      margin: 15px 0;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    input, select {
-      margin: 5px;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-  </style>
 </head>
 <body>
   <div class="container">
     <h1>🎯 Админ-панель</h1>
     <button onclick="addTask()">+ Добавить задание</button>
     <button onclick="saveTasks()">💾 Сохранить изменения</button>
-    <button onclick="logout()" style="background: #e74c3c">🚪 Выйти</button>
-
+    <button onclick="logout()">🚪 Выйти</button>
     <div id="tasks-list">
       <!-- Список заданий будет сгенерирован здесь -->
     </div>
   </div>
-
+  <script src="/admin/admin.js"></script>
   <script>
-    // Выход
     function logout() {
       if (confirm('Вы уверены, что хотите выйти?')) {
         window.location.href = '/admin/';
       }
     }
   </script>
-
-  <script src="/admin/admin.js"></script>
 </body>
 </html>
