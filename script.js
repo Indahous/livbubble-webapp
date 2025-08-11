@@ -1,17 +1,26 @@
-// script.js — Улучшенная версия с эффектами
+// script.js — Финальная версия
 
-// Глобальные переменные
 let tasks = [];
 let completedTasks = 0;
 let bubblesPopped = 0;
 
-// Элементы DOM
 const bubblesContainer = document.getElementById('bubbles');
 const completeButton = document.getElementById('complete');
 const taskModal = document.getElementById('task-modal');
 const taskTitle = document.getElementById('task-title');
 const taskContent = document.getElementById('task-content');
 const modalCloseButton = document.querySelector('#task-modal button');
+
+// Разрешение на автовоспроизведение
+let audioContext;
+if ('AudioContext' in window || 'webkitAudioContext' in window) {
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+}
+document.body.addEventListener('touchstart', () => {
+  if (audioContext && audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+}, { once: true });
 
 // Загрузка заданий
 async function loadTasks() {
@@ -25,7 +34,7 @@ async function loadTasks() {
   }
 }
 
-// Показать модальное окно с заданием
+// Показать модальное окно
 function showTaskModal(task) {
   taskTitle.textContent = task.title;
   taskContent.innerHTML = '';
@@ -72,7 +81,6 @@ function showTaskModal(task) {
   taskModal.style.display = 'block';
 }
 
-// Закрыть модальное окно
 function closeTaskModal() {
   taskModal.style.display = 'none';
   const input = document.getElementById('answer-input');
@@ -87,7 +95,6 @@ function createSplash(x, y) {
   splash.style.top = `${y}px`;
   document.body.appendChild(splash);
 
-  // Удаляем через 1 секунду
   setTimeout(() => {
     splash.remove();
   }, 1000);
@@ -98,7 +105,7 @@ function popBubble(bubble, x, y) {
   if (bubble.classList.contains('popped')) return;
   bubble.classList.add('popped');
 
-  // Вибрация (если поддерживается)
+  // Вибрация
   if ('vibrate' in navigator) {
     navigator.vibrate(100);
   }
@@ -113,15 +120,14 @@ function popBubble(bubble, x, y) {
 
   bubblesPopped++;
 
-  // Показать задание (если это один из 5)
-  if (completedTasks < 5 && tasks[completedTasks]) {
+  // Показать задание ТОЛЬКО если у пузыря есть метка
+  if (bubble.dataset.hasTask === 'true' && completedTasks < tasks.length && tasks[completedTasks]) {
     showTaskModal(tasks[completedTasks]);
     completedTasks++;
     checkGameCompletion();
   }
 }
 
-// Проверка завершения игры
 function checkGameCompletion() {
   if (completedTasks >= 5) {
     setTimeout(() => {
@@ -130,7 +136,6 @@ function checkGameCompletion() {
   }
 }
 
-// Обработчик завершения игры
 completeButton.addEventListener('click', () => {
   if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
     Telegram.WebApp.sendData(JSON.stringify({
@@ -139,38 +144,34 @@ completeButton.addEventListener('click', () => {
       tasks_completed: completedTasks
     }));
   } else {
-    console.log('🎮 Игра завершена!', {
-      bubbles_popped: bubblesPopped,
-      tasks_completed: completedTasks
-    });
-    alert('Игра завершена! Результат отправлен.');
+    alert('Игра завершена!');
   }
 });
 
 // Генерация пузырей
 function createBubbles() {
-  const count = 100; // Много пузырей
+  const count = 100;
+  const taskIndices = new Set();
+  while (taskIndices.size < 5) {
+    taskIndices.add(Math.floor(Math.random() * count));
+  }
+
   for (let i = 0; i < count; i++) {
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-
-    // Случайный размер (от 40px до 80px)
     const size = Math.random() * 40 + 40;
     bubble.style.width = `${size}px`;
     bubble.style.height = `${size}px`;
-
-    // Случайные координаты
     const randomX = Math.random() * (window.innerWidth - size);
     const randomY = Math.random() * (window.innerHeight - size);
-
     bubble.style.left = `${randomX}px`;
     bubble.style.top = `${randomY}px`;
-
-    // Обработчик клика
+    if (taskIndices.has(i)) {
+      bubble.dataset.hasTask = 'true';
+    }
     bubble.addEventListener('click', (e) => {
       popBubble(bubble, e.clientX, e.clientY);
     });
-
     bubblesContainer.appendChild(bubble);
   }
 }
@@ -179,7 +180,6 @@ function createBubbles() {
 window.onload = async () => {
   await loadTasks();
   createBubbles();
-
   if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
