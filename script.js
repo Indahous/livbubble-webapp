@@ -1,4 +1,4 @@
-// script.js
+// script.js — Улучшенная версия с эффектами
 
 // Глобальные переменные
 let tasks = [];
@@ -13,32 +13,15 @@ const taskTitle = document.getElementById('task-title');
 const taskContent = document.getElementById('task-content');
 const modalCloseButton = document.querySelector('#task-modal button');
 
-// Загрузка заданий с сервера
+// Загрузка заданий
 async function loadTasks() {
   try {
     const response = await fetch('/tasks.json');
-    if (!response.ok) throw new Error('Не удалось загрузить tasks.json');
     const data = await response.json();
     tasks = data.priority_tasks || [];
     console.log('✅ Задания загружены:', tasks);
   } catch (error) {
     console.error('❌ Ошибка загрузки заданий:', error);
-    // Для отладки: подставим тестовые задания, если файл недоступен
-    tasks = [
-      {
-        id: 1,
-        type: 'subscribe',
-        title: 'Подписаться на канал',
-        link: 'https://t.me/livbubble'
-      },
-      {
-        id: 2,
-        type: 'question',
-        title: 'Кто написал "Войну и мир"?',
-        correct_answer: 'Толстой',
-        case_sensitive: false
-      }
-    ];
   }
 }
 
@@ -96,22 +79,45 @@ function closeTaskModal() {
   if (input) input.value = '';
 }
 
+// Эффект брызг
+function createSplash(x, y) {
+  const splash = document.createElement('div');
+  splash.className = 'splash';
+  splash.style.left = `${x}px`;
+  splash.style.top = `${y}px`;
+  document.body.appendChild(splash);
+
+  // Удаляем через 1 секунду
+  setTimeout(() => {
+    splash.remove();
+  }, 1000);
+}
+
 // Лопнуть пузырь
-function popBubble(bubble) {
+function popBubble(bubble, x, y) {
   if (bubble.classList.contains('popped')) return;
   bubble.classList.add('popped');
-  bubblesPopped++;
-
-  // Если ещё не все задания выполнены — показать следующее
-  if (completedTasks < tasks.length && tasks[completedTasks]) {
-    showTaskModal(tasks[completedTasks]);
-    completedTasks++;
-    checkGameCompletion();
-  }
 
   // Вибрация (если поддерживается)
   if ('vibrate' in navigator) {
     navigator.vibrate(100);
+  }
+
+  // Звук
+  const popSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-balloon-pop-2564.mp3');
+  popSound.volume = 0.3;
+  popSound.play().catch(() => {});
+
+  // Эффект брызг
+  createSplash(x, y);
+
+  bubblesPopped++;
+
+  // Показать задание (если это один из 5)
+  if (completedTasks < 5 && tasks[completedTasks]) {
+    showTaskModal(tasks[completedTasks]);
+    completedTasks++;
+    checkGameCompletion();
   }
 }
 
@@ -143,29 +149,37 @@ completeButton.addEventListener('click', () => {
 
 // Генерация пузырей
 function createBubbles() {
-  for (let i = 0; i < 10; i++) {
+  const count = 100; // Много пузырей
+  for (let i = 0; i < count; i++) {
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    bubble.innerHTML = '🫧';
+
+    // Случайный размер (от 40px до 80px)
+    const size = Math.random() * 40 + 40;
+    bubble.style.width = `${size}px`;
+    bubble.style.height = `${size}px`;
 
     // Случайные координаты
-    const randomX = Math.random() * (window.innerWidth - 70);
-    const randomY = Math.random() * (window.innerHeight - 70);
+    const randomX = Math.random() * (window.innerWidth - size);
+    const randomY = Math.random() * (window.innerHeight - size);
 
     bubble.style.left = `${randomX}px`;
     bubble.style.top = `${randomY}px`;
 
-    bubble.addEventListener('click', () => popBubble(bubble));
+    // Обработчик клика
+    bubble.addEventListener('click', (e) => {
+      popBubble(bubble, e.clientX, e.clientY);
+    });
+
     bubblesContainer.appendChild(bubble);
   }
 }
 
-// Инициализация игры
+// Инициализация
 window.onload = async () => {
   await loadTasks();
   createBubbles();
 
-  // Проверка, что Telegram WebApp загружен
   if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
