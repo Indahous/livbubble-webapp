@@ -1,123 +1,105 @@
-// server.js - Основной серверный файл приложения Liv Bubble
-
-// 1. Импорты необходимых модулей
-require('dotenv').config(); // Загружает переменные окружения из .env
+// server.js — Основной серверный файл приложения Liv Bubble
+require('dotenv').config();
 const express = require('express');
-const fs = require('fs').promises; // Используем промисифицированную версию fs
+const fs = require('fs').promises;
 const path = require('path');
+const cookieParser = require('cookie-parser');
 
-// 2. Инициализация приложения Express
 const app = express();
 const PORT = process.env.PORT || 8080;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
-// 3. Middleware
-// Middleware для парсинга JSON в теле запроса (например, для POST-запросов)
+if (!ADMIN_PASSWORD) {
+    console.error("❌ КРИТИЧЕСКАЯ ОШИБКА: Переменная окружения ADMIN_PASSWORD не установлена в .env файле!");
+    process.exit(1);
+}
+
+// --- Middleware ---
 app.use(express.json());
+app.use(cookieParser());
 
-// --- Настройка обслуживания статических файлов ---
-// Middleware для обслуживания статических файлов из папки 'admin' по пути '/admin'
-// Это позволит загружать admin.css и admin.js по адресам /admin/admin.css и /admin/admin.js
-app.use('/admin', express.static(path.join(__dirname, 'admin')));
+// --- Статические файлы ---
+app.use(express.static(path.join(__dirname))); // index.html, style.css, script.js, sound/, и т.д.
+app.use('/admin', express.static(path.join(__dirname, 'admin'))); // Админ-панель
 
-// Middleware для обслуживания статических файлов из папки 'admin-panel' по пути '/admin-panel'
-// Это позволит загружать index.html и другие файлы из admin-panel по адресам /admin-panel/...
-app.use('/admin-panel', express.static(path.join(__dirname, 'admin-panel')));
+// --- Middleware для проверки аутентификации администратора ---
+const requireAdminAuth = (req, res, next) => {
+    const token = req.cookies.authToken;
+    if (token === ADMIN_PASSWORD) {
+        return next();
+    } else {
+        console.log(`⚠️ Попытка несанкционированного доступа к ${req.originalUrl} от ${req.ip}`);
+        return res.redirect('/admin');
+    }
+};
 
-// Middleware для обслуживания статических файлов из корня проекта (для index.html, style.css, script.js, tasks.json)
-// Предполагается, что основной сайт находится в корне. Если у вас есть папка 'public', замените '.' на 'public'.
-app.use(express.static(path.join(__dirname))); // Или path.join(__dirname, 'public') если файлы там
+// --- Маршрут для входа в админку ---
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin', 'index.html'));
+});
 
-// 4. Маршруты API
+// --- Защищённые маршруты (только для авторизованных админов) ---
+app.use('/admin/', requireAdminAuth);
 
-// --- Маршрут для проверки пароля (используется на странице входа /admin) ---
+// Маршрут для проверки пароля
 app.post('/check-password', (req, res) => {
     const { password } = req.body;
-    console.log(`Попытка входа с паролем: ${password}`); // Для отладки
+    console.log(`🔐 Попытка входа: ${password ? '***' : '(пусто)'}`);
     if (password === ADMIN_PASSWORD) {
-        console.log('✅ Вход в админ-панель разрешен');
+        res.cookie('authToken', ADMIN_PASSWORD, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production', // true на Render
+            maxAge: 30 * 60 * 1000,
+            sameSite: 'strict'
+        });
         return res.json({ success: true, message: 'Пароль верный' });
     } else {
-        console.log('❌ Вход в админ-панель запрещен: неверный пароль');
+        res.clearCookie('authToken');
         return res.status(401).json({ success: false, message: 'Неверный пароль' });
     }
 });
 
-// --- Маршрут для получения заданий (используется в админке и на основном сайте) ---
+// Маршрут для выхода
+app.post('/logout', (req, res) => {
+    res.clearCookie('authToken');
+    res.json({ success: true });
+});
+
+// Чтение заданий
 app.get('/tasks.json', async (req, res) => {
     try {
-        // Читаем файл tasks.json
         const data = await fs.readFile(path.join(__dirname, 'tasks.json'), 'utf8');
-        // Парсим JSON и отправляем клиенту
         res.json(JSON.parse(data));
-        console.log('✅ Задания успешно отправлены клиенту');
     } catch (err) {
-        console.error('❌ Ошибка чтения файла tasks.json:', err);
-        // Отправляем пустой массив, если файл не найден или ошибка
+        console.error('❌ Ошибка чтения tasks.json:', err);
         res.status(500).json({ priority_tasks: [] });
     }
 });
 
-// --- Маршрут для добавления нового пустого задания (через админку) ---
-// Примечание: Эта функциональность уже частично реализована в admin.js через push в массив.
-// Этот маршрут может быть избыточным, если admin.js напрямую модифицирует массив в памяти,
-// а сохранение происходит через /save-tasks. Оставлен для совместимости или если нужна серверная логика.
-app.post('/add-task', (req, res) => {
-    const { password } = req.body;
-    console.log('Попытка добавить задание через API /add-task');
-    if (password !== ADMIN_PASSWORD) {
-        console.log('❌ Отказано в добавлении задания: неверный пароль');
-        return res.status(401).json({ success: false, message: 'Неверный пароль' });
+// Сохранение заданий (только для админов)
+app.post('/save-tasks', requireAdminAuth, async (req, res) => {
+    const { priority_tasks } = req.body;
+    if (!Array.isArray(priority_tasks)) {
+        return res.status(400).json({ success: false, message: 'priority_tasks должен быть массивом' });
     }
-    // Логика добавления задания на сервере (если бы она была нужна здесь)
-    // Но в текущей реализации admin.js это делает клиент
-    res.json({ success: true, message: 'Задание добавлено! (на клиенте)' });
-    console.log('✅ Задание добавлено (API вызван, но логика на клиенте)');
-});
 
-// --- Маршрут для сохранения всех заданий (из админки) ---
-app.post('/save-tasks', async (req, res) => {
-    const { password, priority_tasks } = req.body;
-    console.log('Попытка сохранить задания через API /save-tasks');
-    if (password !== ADMIN_PASSWORD) {
-        console.log('❌ Отказано в сохранении заданий: неверный пароль');
-        return res.status(401).json({ success: false, message: 'Неверный пароль' });
-    }
     try {
-        // Записываем полученные данные в файл tasks.json
         await fs.writeFile(path.join(__dirname, 'tasks.json'), JSON.stringify({ priority_tasks }, null, 2));
-        console.log('✅ Задания успешно сохранены в файл tasks.json');
+        console.log('✅ Задания сохранены');
         res.json({ success: true, message: 'Задания успешно сохранены!' });
     } catch (err) {
-        console.error('❌ Ошибка сохранения файла tasks.json:', err);
-        res.status(500).json({ success: false, message: 'Ошибка сохранения на сервере' });
+        console.error('❌ Ошибка записи tasks.json:', err);
+        res.status(500).json({ success: false, message: 'Ошибка сохранения' });
     }
 });
 
-// 5. Маршруты для страниц (чтобы Express знал, какие HTML-файлы отдавать)
-
-// --- Маршрут для главной страницы сайта ---
+// Главная страница
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html')); // Или path.join(__dirname, 'public', 'index.html')
-    console.log('🏠 Отправлена главная страница index.html');
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- Маршрут для страницы входа в админку ---
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'admin', 'index.html'));
-    console.log('🔐 Отправлена страница входа admin/index.html');
+// --- Запуск сервера ---
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Сервер запущен на порту ${PORT}`);
+    console.log(`🔗 Доступно: http://localhost:${PORT}`);
 });
-
-// --- Маршрут для админ-панели ---
-// Обрабатывает прямой переход по /admin-panel/ (без index.html в URL)
-app.get('/admin-panel', (req, res) => {
-    res.sendFile(path.join(__dirname, 'admin-panel', 'index.html'));
-    console.log('🎯 Отправлена админ-панель admin-panel/index.html');
-});
-
-// 6. Запуск сервера
-app.listen(PORT, () => {
-    console.log(`🚀 Сервер запущен и слушает порт ${PORT}`);
-    console.log(`🔗 Локальный адрес: http://localhost:${PORT}`);
-});
-

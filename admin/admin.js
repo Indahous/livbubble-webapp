@@ -1,4 +1,5 @@
-// Глобальный массив задач
+// admin/admin.js — Улучшенная версия с валидацией и UX
+
 let tasks = [];
 const tasksList = document.getElementById('tasks-list');
 
@@ -6,13 +7,15 @@ const tasksList = document.getElementById('tasks-list');
 async function loadTasks() {
   try {
     const response = await fetch('/tasks.json');
+    if (!response.ok) throw new Error('Network error');
     const data = await response.json();
-    tasks = data.priority_tasks || [];
+    tasks = Array.isArray(data.priority_tasks) ? data.priority_tasks : [];
     renderTasks();
   } catch (error) {
     console.error('❌ Ошибка загрузки заданий:', error);
     tasks = [];
     renderTasks();
+    alert('⚠️ Не удалось загрузить задания. Проверьте подключение.');
   }
 }
 
@@ -24,14 +27,17 @@ function renderTasks() {
     taskEl.className = 'task';
     taskEl.innerHTML = `
       <div>
-        <input type="text" placeholder="Название" value="${task.title || ''}" oninput="updateTask(${index}, 'title', this.value)">
+        <input type="text" placeholder="Название" value="${escapeHtml(task.title || '')}" oninput="updateTask(${index}, 'title', this.value)">
+        
         <select onchange="updateTask(${index}, 'type', this.value)">
           <option value="subscribe" ${task.type === 'subscribe' ? 'selected' : ''}>Подписаться</option>
           <option value="buy" ${task.type === 'buy' ? 'selected' : ''}>Купить</option>
           <option value="question" ${task.type === 'question' ? 'selected' : ''}>Вопрос</option>
         </select>
-        <input type="text" placeholder="Ссылка (если есть)" value="${task.link || ''}" oninput="updateTask(${index}, 'link', this.value)">
-        <input type="text" placeholder="Правильный ответ (для вопросов)" value="${task.correct_answer || ''}" oninput="updateTask(${index}, 'correct_answer', this.value)">
+        
+        <input type="text" placeholder="Ссылка (если есть)" value="${escapeHtml(task.link || '')}" oninput="updateTask(${index}, 'link', this.value)">
+        
+        <input type="text" placeholder="Правильный ответ (для вопросов)" value="${escapeHtml(task.correct_answer || '')}" oninput="updateTask(${index}, 'correct_answer', this.value)">
       </div>
       <button onclick="removeTask(${index})">🗑️ Удалить</button>
     `;
@@ -39,9 +45,18 @@ function renderTasks() {
   });
 }
 
+// Экранирование HTML (защита от XSS)
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // Обновление поля задания
 function updateTask(index, field, value) {
-  tasks[index][field] = value;
+  if (tasks[index]) {
+    tasks[index][field] = value;
+  }
 }
 
 // Добавить новое задание
@@ -53,33 +68,43 @@ function addTask() {
     correct_answer: ''
   });
   renderTasks();
+  // Прокрутка к новому заданию
+  tasksList.lastElementChild.scrollIntoView({ behavior: 'smooth' });
 }
 
 // Удалить задание
 function removeTask(index) {
-  tasks.splice(index, 1);
-  renderTasks();
+  if (confirm('Удалить это задание?')) {
+    tasks.splice(index, 1);
+    renderTasks();
+  }
 }
 
 // Сохранить задания
 async function saveTasks() {
   const password = prompt("🔒 Введите пароль администратора:");
-  if (!password) return;
+  if (!password) {
+    alert('❌ Отменено пользователем');
+    return;
+  }
+
   try {
     const response = await fetch('/save-tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password, priority_tasks: tasks })
     });
+
     const data = await response.json();
+
     if (data.success) {
       alert('✅ Задания успешно сохранены!');
     } else {
       alert(`❌ ${data.message}`);
     }
   } catch (error) {
-    console.error('Ошибка сохранения:', error);
-    alert('⚠️ Ошибка сети. Попробуйте позже.');
+    console.error('❌ Ошибка сохранения:', error);
+    alert('⚠️ Ошибка сети. Проверьте подключение.');
   }
 }
 
