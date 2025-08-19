@@ -1,24 +1,30 @@
-// script.js — Финальная версия
+// script.js — Полная версия с звуком, вибрацией и управлением
 
 let tasks = [];
 let completedTasks = 0;
 let bubblesPopped = 0;
 
+// Элементы DOM
 const bubblesContainer = document.getElementById('bubbles');
 const completeButton = document.getElementById('complete');
 const taskModal = document.getElementById('task-modal');
 const taskTitle = document.getElementById('task-title');
 const taskContent = document.getElementById('task-content');
-const modalCloseButton = document.querySelector('#task-modal button');
+const soundButton = document.getElementById('toggle-sound');
+const vibrationButton = document.getElementById('toggle-vibration');
+
+// Аудио
+const startSound = document.getElementById('start-sound');
+const popSound = document.getElementById('pop-sound');
+
+// Состояние
+let isSoundEnabled = true;
+let isVibrationEnabled = true;
 
 // Разрешение на автовоспроизведение
-let audioContext;
-if ('AudioContext' in window || 'webkitAudioContext' in window) {
-  audioContext = new (window.AudioContext || window.webkitAudioContext)();
-}
-document.body.addEventListener('touchstart', () => {
-  if (audioContext && audioContext.state === 'suspended') {
-    audioContext.resume();
+document.body.addEventListener('click', () => {
+  if (isSoundEnabled && startSound) {
+    startSound.play().catch(e => console.warn("❌ Не удалось воспроизвести стартовую музыку:", e));
   }
 }, { once: true });
 
@@ -93,6 +99,8 @@ function createSplash(x, y) {
   splash.className = 'splash';
   splash.style.left = `${x}px`;
   splash.style.top = `${y}px`;
+  splash.style.setProperty('--x', `${Math.random() * 20 - 10}px`);
+  splash.style.setProperty('--y', `${Math.random() * 20 - 10}px`);
   document.body.appendChild(splash);
 
   setTimeout(() => {
@@ -106,21 +114,22 @@ function popBubble(bubble, x, y) {
   bubble.classList.add('popped');
 
   // Вибрация
-  if ('vibrate' in navigator) {
+  if (isVibrationEnabled && 'vibrate' in navigator) {
     navigator.vibrate(100);
   }
 
   // Звук
-  const popSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-balloon-pop-2564.mp3');
-  popSound.volume = 0.3;
-  popSound.play().catch(() => {});
+  if (isSoundEnabled && popSound) {
+    popSound.currentTime = 0;
+    popSound.play().catch(e => console.warn("❌ Не удалось воспроизвести звук:", e));
+  }
 
   // Эффект брызг
   createSplash(x, y);
 
   bubblesPopped++;
 
-  // Показать задание ТОЛЬКО если у пузыря есть метка
+  // Показать задание
   if (bubble.dataset.hasTask === 'true' && completedTasks < tasks.length && tasks[completedTasks]) {
     showTaskModal(tasks[completedTasks]);
     completedTasks++;
@@ -128,6 +137,7 @@ function popBubble(bubble, x, y) {
   }
 }
 
+// Проверка завершения
 function checkGameCompletion() {
   if (completedTasks >= 5) {
     setTimeout(() => {
@@ -136,6 +146,7 @@ function checkGameCompletion() {
   }
 }
 
+// Завершить игру
 completeButton.addEventListener('click', () => {
   if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
     Telegram.WebApp.sendData(JSON.stringify({
@@ -144,7 +155,34 @@ completeButton.addEventListener('click', () => {
       tasks_completed: completedTasks
     }));
   } else {
-    alert('Игра завершена!');
+    alert('🎉 Игра завершена! Результат отправлен.');
+  }
+});
+
+// Управление звуком
+soundButton.addEventListener('click', () => {
+  isSoundEnabled = !isSoundEnabled;
+  if (isSoundEnabled) {
+    soundButton.textContent = '🔊 Звук: Вкл';
+    if (startSound) startSound.muted = false;
+    if (popSound) popSound.muted = false;
+  } else {
+    soundButton.textContent = '🔇 Звук: Выкл';
+    if (startSound) startSound.muted = true;
+    if (popSound) popSound.muted = true;
+  }
+});
+
+// Управление вибрацией
+vibrationButton.addEventListener('click', () => {
+  isVibrationEnabled = !isVibrationEnabled;
+  if (isVibrationEnabled) {
+    vibrationButton.textContent = '📳 Вибрация: Вкл';
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50); // Краткая вибрация для активации
+    }
+  } else {
+    vibrationButton.textContent = '📴 Вибрация: Выкл';
   }
 });
 

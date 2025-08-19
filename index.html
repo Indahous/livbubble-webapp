@@ -8,7 +8,7 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <!-- Подключение стилей -->
   <link rel="stylesheet" href="style.css" />
-  <!-- Звуки (предзагрузка) -->
+  <!-- Звуки -->
   <audio id="start-sound" src="/sound/start.mp3" preload="auto"></audio>
   <audio id="pop-sound" src="/sound/pop.mp3" preload="auto"></audio>
 </head>
@@ -26,7 +26,13 @@
     </div>
   </div>
 
-  <!-- Подключение основного скрипта -->
+  <!-- Кнопки управления -->
+  <div class="controls">
+    <button id="toggle-sound" class="control-btn">🔊 Звук: Вкл</button>
+    <button id="toggle-vibration" class="control-btn">📳 Вибрация: Вкл</button>
+  </div>
+
+  <!-- Подключение скрипта -->
   <script src="script.js"></script>
 </body>
 </html>
