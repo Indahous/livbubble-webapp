@@ -1,10 +1,10 @@
-// script.js — Полная версия с звуком, вибрацией и управлением
+// script.js — Полная версия с Haptic Feedback, вибрацией и звуком
 
 let tasks = [];
 let completedTasks = 0;
 let bubblesPopped = 0;
 
-// Элементы DOM
+// DOM-элементы
 const bubblesContainer = document.getElementById('bubbles');
 const completeButton = document.getElementById('complete');
 const taskModal = document.getElementById('task-modal');
@@ -21,14 +21,35 @@ const popSound = document.getElementById('pop-sound');
 let isSoundEnabled = true;
 let isVibrationEnabled = true;
 
-// Разрешение на автовоспроизведение
-document.body.addEventListener('click', () => {
+// ================
+// Активация вибрации и звука при первом взаимодействии
+// ================
+
+// Активация вибрации и звука при первом касании
+document.body.addEventListener('touchstart', activateFeedback, { once: true });
+document.body.addEventListener('click', activateFeedback, { once: true });
+
+function activateFeedback() {
+  // Активация вибрации (для Android)
+  if ('vibrate' in navigator) {
+    navigator.vibrate(1);
+  }
+
+  // Активация звука
   if (isSoundEnabled && startSound) {
     startSound.play().catch(e => console.warn("❌ Не удалось воспроизвести стартовую музыку:", e));
   }
-}, { once: true });
 
+  // Активация Haptic Feedback (Telegram)
+  if (typeof Telegram !== 'undefined' && Telegram.WebApp.HapticFeedback) {
+    Telegram.WebApp.HapticFeedback.impactOccurred('light');
+  }
+}
+
+// ================
 // Загрузка заданий
+// ================
+
 async function loadTasks() {
   try {
     const response = await fetch('/tasks.json');
@@ -40,7 +61,10 @@ async function loadTasks() {
   }
 }
 
-// Показать модальное окно
+// ================
+// Модальное окно с заданием
+// ================
+
 function showTaskModal(task) {
   taskTitle.textContent = task.title;
   taskContent.innerHTML = '';
@@ -93,7 +117,10 @@ function closeTaskModal() {
   if (input) input.value = '';
 }
 
+// ================
 // Эффект брызг
+// ================
+
 function createSplash(x, y) {
   const splash = document.createElement('div');
   splash.className = 'splash';
@@ -108,14 +135,22 @@ function createSplash(x, y) {
   }, 1000);
 }
 
+// ================
 // Лопнуть пузырь
+// ================
+
 function popBubble(bubble, x, y) {
   if (bubble.classList.contains('popped')) return;
   bubble.classList.add('popped');
 
-  // Вибрация
-  if (isVibrationEnabled && 'vibrate' in navigator) {
-    navigator.vibrate(100);
+  // Тактильная обратная связь
+  if (isVibrationEnabled) {
+    // Приоритет: Haptic Feedback (Telegram, iOS)
+    if (typeof Telegram !== 'undefined' && Telegram.WebApp.HapticFeedback) {
+      Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+    } else if ('vibrate' in navigator) {
+      navigator.vibrate(100);
+    }
   }
 
   // Звук
@@ -129,7 +164,7 @@ function popBubble(bubble, x, y) {
 
   bubblesPopped++;
 
-  // Показать задание
+  // Показать задание (если есть)
   if (bubble.dataset.hasTask === 'true' && completedTasks < tasks.length && tasks[completedTasks]) {
     showTaskModal(tasks[completedTasks]);
     completedTasks++;
@@ -137,7 +172,10 @@ function popBubble(bubble, x, y) {
   }
 }
 
-// Проверка завершения
+// ================
+// Проверка завершения игры
+// ================
+
 function checkGameCompletion() {
   if (completedTasks >= 5) {
     setTimeout(() => {
@@ -146,7 +184,10 @@ function checkGameCompletion() {
   }
 }
 
-// Завершить игру
+// ================
+// Завершение игры
+// ================
+
 completeButton.addEventListener('click', () => {
   if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
     Telegram.WebApp.sendData(JSON.stringify({
@@ -159,7 +200,10 @@ completeButton.addEventListener('click', () => {
   }
 });
 
+// ================
 // Управление звуком
+// ================
+
 soundButton.addEventListener('click', () => {
   isSoundEnabled = !isSoundEnabled;
   if (isSoundEnabled) {
@@ -173,20 +217,30 @@ soundButton.addEventListener('click', () => {
   }
 });
 
+// ================
 // Управление вибрацией
+// ================
+
 vibrationButton.addEventListener('click', () => {
   isVibrationEnabled = !isVibrationEnabled;
   if (isVibrationEnabled) {
     vibrationButton.textContent = '📳 Вибрация: Вкл';
+    // Краткая вибрация для подтверждения
     if ('vibrate' in navigator) {
-      navigator.vibrate(50); // Краткая вибрация для активации
+      navigator.vibrate(50);
+    }
+    if (typeof Telegram !== 'undefined' && Telegram.WebApp.HapticFeedback) {
+      Telegram.WebApp.HapticFeedback.impactOccurred('light');
     }
   } else {
     vibrationButton.textContent = '📴 Вибрация: Выкл';
   }
 });
 
+// ================
 // Генерация пузырей
+// ================
+
 function createBubbles() {
   const count = 100;
   const taskIndices = new Set();
@@ -214,10 +268,15 @@ function createBubbles() {
   }
 }
 
+// ================
 // Инициализация
+// ================
+
 window.onload = async () => {
   await loadTasks();
   createBubbles();
+
+  // Подготовка Telegram WebApp
   if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
