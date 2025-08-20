@@ -4,6 +4,7 @@ const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
 const cookieParser = require('cookie-parser');
+const cors = require('cors'); // Добавлено
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -15,12 +16,16 @@ if (!ADMIN_PASSWORD) {
 }
 
 // --- Middleware ---
+app.use(cors({
+  origin: 'https://livbubble-webapp.onrender.com',
+  credentials: true
+}));
 app.use(express.json());
 app.use(cookieParser());
 
 // --- Статические файлы ---
-app.use(express.static(path.join(__dirname))); // index.html, style.css, script.js, sound/, и т.д.
-app.use('/admin', express.static(path.join(__dirname, 'admin'))); // Админ-панель
+app.use(express.static(path.join(__dirname)));
+app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
 // --- Middleware для проверки аутентификации администратора ---
 const requireAdminAuth = (req, res, next) => {
@@ -38,17 +43,16 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin', 'index.html'));
 });
 
-// --- Защищённые маршруты (только для авторизованных админов) ---
+// --- Защищённые маршруты ---
 app.use('/admin/', requireAdminAuth);
 
-// Маршрут для проверки пароля
+// Проверка пароля
 app.post('/check-password', (req, res) => {
     const { password } = req.body;
-    console.log(`🔐 Попытка входа: ${password ? '***' : '(пусто)'}`);
     if (password === ADMIN_PASSWORD) {
         res.cookie('authToken', ADMIN_PASSWORD, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // true на Render
+            secure: false,
             maxAge: 30 * 60 * 1000,
             sameSite: 'strict'
         });
@@ -59,7 +63,7 @@ app.post('/check-password', (req, res) => {
     }
 });
 
-// Маршрут для выхода
+// Выход
 app.post('/logout', (req, res) => {
     res.clearCookie('authToken');
     res.json({ success: true });
@@ -76,7 +80,7 @@ app.get('/tasks.json', async (req, res) => {
     }
 });
 
-// Сохранение заданий (только для админов)
+// Сохранение заданий
 app.post('/save-tasks', requireAdminAuth, async (req, res) => {
     const { priority_tasks } = req.body;
     if (!Array.isArray(priority_tasks)) {
@@ -101,5 +105,4 @@ app.get('/', (req, res) => {
 // --- Запуск сервера ---
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Сервер запущен на порту ${PORT}`);
-    console.log(`🔗 Доступно: http://localhost:${PORT}`);
 });
