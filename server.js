@@ -1,44 +1,60 @@
-// server.js — Основной серверный файл приложения Liv Bubble
+// server.js — Исправленная версия с /tmp
+
 require('dotenv').config();
 const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
 const cookieParser = require('cookie-parser');
-const cors = require('cors'); // Добавлено
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 if (!ADMIN_PASSWORD) {
-    console.error("❌ КРИТИЧЕСКАЯ ОШИБКА: Переменная окружения ADMIN_PASSWORD не установлена в .env файле!");
+    console.error("❌ КРИТИЧЕСКАЯ ОШИБКА: ADMIN_PASSWORD не установлен!");
     process.exit(1);
 }
 
-// --- Middleware ---
+// --- CORS ---
 app.use(cors({
-  origin: 'https://livbubble-webapp.onrender.com',
-  credentials: true
+    origin: 'https://livbubble-webapp.onrender.com',
+    credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
 
+// --- Путь к временному файлу ---
+const TASKS_FILE = path.join('/tmp', 'tasks.json');
+const DEFAULT_TASKS = path.join(__dirname, 'tasks.json'); // путь к исходному файлу
+
+// --- Инициализация: копируем tasks.json в /tmp при старте ---
+async function initTasks() {
+    try {
+        await fs.access(TASKS_FILE);
+        console.log('✅ tasks.json уже в /tmp');
+    } catch (err) {
+        console.log('📁 Копирую tasks.json из корня в /tmp');
+        const data = await fs.readFile(DEFAULT_TASKS, 'utf8');
+        await fs.writeFile(TASKS_FILE, data);
+        console.log('✅ tasks.json скопирован в /tmp');
+    }
+}
+
 // --- Статические файлы ---
 app.use(express.static(path.join(__dirname)));
-app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
-// --- Middleware для проверки аутентификации администратора ---
+// --- Middleware для аутентификации ---
 const requireAdminAuth = (req, res, next) => {
     const token = req.cookies.authToken;
     if (token === ADMIN_PASSWORD) {
         return next();
     } else {
-        console.log(`⚠️ Попытка несанкционированного доступа к ${req.originalUrl} от ${req.ip}`);
         return res.redirect('/admin');
     }
 };
 
-// --- Маршрут для входа в админку ---
+// --- Маршрут для админки ---
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin', 'index.html'));
 });
@@ -46,7 +62,7 @@ app.get('/admin', (req, res) => {
 // --- Защищённые маршруты ---
 app.use('/admin/', requireAdminAuth);
 
-// Проверка пароля
+// --- Проверка пароля ---
 app.post('/check-password', (req, res) => {
     const { password } = req.body;
     if (password === ADMIN_PASSWORD) {
@@ -63,24 +79,24 @@ app.post('/check-password', (req, res) => {
     }
 });
 
-// Выход
+// --- Выход ---
 app.post('/logout', (req, res) => {
     res.clearCookie('authToken');
     res.json({ success: true });
 });
 
-// Чтение заданий
+// --- Чтение заданий ---
 app.get('/tasks.json', async (req, res) => {
     try {
-        const data = await fs.readFile(path.join(__dirname, 'tasks.json'), 'utf8');
+        const data = await fs.readFile(TASKS_FILE, 'utf8');
         res.json(JSON.parse(data));
     } catch (err) {
-        console.error('❌ Ошибка чтения tasks.json:', err);
+        console.error('❌ Ошибка чтения из /tmp/tasks.json:', err);
         res.status(500).json({ priority_tasks: [] });
     }
 });
 
-// Сохранение заданий
+// --- Сохранение заданий ---
 app.post('/save-tasks', requireAdminAuth, async (req, res) => {
     const { priority_tasks } = req.body;
     if (!Array.isArray(priority_tasks)) {
@@ -88,21 +104,22 @@ app.post('/save-tasks', requireAdminAuth, async (req, res) => {
     }
 
     try {
-        await fs.writeFile(path.join(__dirname, 'tasks.json'), JSON.stringify({ priority_tasks }, null, 2));
-        console.log('✅ Задания сохранены');
+        await fs.writeFile(TASKS_FILE, JSON.stringify({ priority_tasks }, null, 2));
+        console.log('✅ Задания сохранены в /tmp/tasks.json');
         res.json({ success: true, message: 'Задания успешно сохранены!' });
     } catch (err) {
-        console.error('❌ Ошибка записи tasks.json:', err);
+        console.error('❌ Ошибка записи в /tmp/tasks.json:', err);
         res.status(500).json({ success: false, message: 'Ошибка сохранения' });
     }
 });
 
-// Главная страница
+// --- Главная страница ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // --- Запуск сервера ---
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
+    await initTasks(); // ← Инициализация /tmp
     console.log(`🚀 Сервер запущен на порту ${PORT}`);
 });
