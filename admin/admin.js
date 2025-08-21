@@ -1,4 +1,4 @@
-// admin/admin.js — Улучшенная версия с валидацией и UX
+// admin/admin.js — Финальная версия с credentials
 
 let tasks = [];
 const tasksList = document.getElementById('tasks-list');
@@ -68,7 +68,6 @@ function addTask() {
     correct_answer: ''
   });
   renderTasks();
-  // Прокрутка к новому заданию
   tasksList.lastElementChild.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -92,7 +91,8 @@ async function saveTasks() {
     const response = await fetch('/save-tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, priority_tasks: tasks })
+      body: JSON.stringify({ password, priority_tasks: tasks }),
+      credentials: 'include' // 🔥 Отправляет куки
     });
 
     const data = await response.json();
