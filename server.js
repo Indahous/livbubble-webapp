@@ -50,7 +50,11 @@ const requireAdminAuth = (req, res, next) => {
     if (token === ADMIN_PASSWORD) {
         return next();
     } else {
-        return res.redirect('/admin');
+        console.log(`⚠️ Попытка несанкционированного доступа к ${req.originalUrl} от ${req.ip}`);
+        return res.status(401).json({ 
+            success: false, 
+            message: 'Требуется авторизация' 
+        }); // ✅ Теперь возвращает JSON
     }
 };
 
