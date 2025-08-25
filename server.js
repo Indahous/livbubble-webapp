@@ -68,7 +68,7 @@ app.post('/check-password', (req, res) => {
     if (password === ADMIN_PASSWORD) {
         res.cookie('authToken', ADMIN_PASSWORD, {
             httpOnly: true,
-            secure: false,
+            secure: true, // ✅ Render всегда использует HTTPS
             maxAge: 30 * 60 * 1000,
             sameSite: 'strict'
         });
