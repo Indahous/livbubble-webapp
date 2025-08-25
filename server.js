@@ -70,12 +70,13 @@ app.use('/admin/', requireAdminAuth);
 app.post('/check-password', (req, res) => {
     const { password } = req.body;
     if (password === ADMIN_PASSWORD) {
-        res.cookie('authToken', ADMIN_PASSWORD, {
-            httpOnly: true,
-            secure: true, // ✅ Render всегда использует HTTPS
-            maxAge: 30 * 60 * 1000,
-            sameSite: 'lax' // ✅ Разрешает POST-запросы
-        });
+res.cookie('authToken', ADMIN_PASSWORD, {
+    httpOnly: true,
+    secure: true,
+    maxAge: 30 * 60 * 1000,
+    sameSite: 'lax',
+    path: '/' // ✅ Критически важно: кука доступна для всего домена
+});
         return res.json({ success: true, message: 'Пароль верный' });
     } else {
         res.clearCookie('authToken');
