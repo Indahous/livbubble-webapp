@@ -70,7 +70,7 @@ app.post('/check-password', (req, res) => {
             httpOnly: true,
             secure: true, // ✅ Render всегда использует HTTPS
             maxAge: 30 * 60 * 1000,
-            sameSite: 'strict'
+            sameSite: 'lax' // ✅ Разрешает POST-запросы
         });
         return res.json({ success: true, message: 'Пароль верный' });
     } else {
